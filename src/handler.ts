@@ -102,9 +102,13 @@ export async function handlePullRequest(
     try {
       const reviewers = utils.chooseReviewers(owner, config)
 
-      if (reviewers.length > 0) {
-        await pr.addReviewers(reviewers)
-        core.info(`Added reviewers to PR #${number}: ${reviewers.join(', ')}`)
+      // Re-requesting a review from someone that already approved makes them un-approve the PR, so we filter out the approvers
+      const approvers = await pr.getApprovers();
+      const reviewersToAdd = reviewers.filter((reviewer) => !approvers.includes(reviewer));
+
+      if (reviewersToAdd.length > 0) {
+        await pr.addReviewers(reviewersToAdd)
+        core.info(`Added reviewers to PR #${number}: ${reviewersToAdd.join(', ')}`)
       }
     } catch (error) {
       if (error instanceof Error) {

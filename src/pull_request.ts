@@ -11,6 +11,21 @@ export class PullRequest {
     this.context = context
   }
 
+  async getApprovers(): Promise<string[]> {
+    const { owner, repo, number: pull_number } = this.context.issue;
+    try {
+      const result = await this.client.rest.pulls.listReviews({
+        owner,
+        repo,
+        pull_number,
+      });
+      return result.filter((review) => review.state === 'APPROVED').map((review) => review.user.login);
+    } catch (err) {
+      core.debug(err);
+      return [];
+    }
+  }
+
   async addReviewers(reviewers: string[]): Promise<void> {
     const { owner, repo, number: pull_number } = this.context.issue
     const result = await this.client.rest.pulls.requestReviewers({
