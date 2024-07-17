@@ -12,17 +12,25 @@ export class PullRequest {
   }
 
   async getApprovers(): Promise<string[]> {
-    const { owner, repo, number: pull_number } = this.context.issue;
+    const { owner, repo, number: pull_number } = this.context.issue
     try {
       const result = await this.client.rest.pulls.listReviews({
         owner,
         repo,
         pull_number,
-      });
-      return result.filter((review) => review.state === 'APPROVED').map((review) => review.user.login);
+      })
+      core.debug(JSON.stringify(result))
+      if (result.status == 200 && result.data) {
+        return result.data
+          .filter((review) => review.state === 'APPROVED')
+          .map((review) => review?.user?.login)
+          .filter((login): login is string => !!login) // filter undefined
+      } else {
+        return []
+      }
     } catch (err) {
-      core.debug(err);
-      return [];
+      core.debug(String(err))
+      return []
     }
   }
 
