@@ -86,9 +86,12 @@ function handlePullRequest(client, context, config) {
         if (addReviewers) {
             try {
                 const reviewers = utils.chooseReviewers(owner, config);
-                if (reviewers.length > 0) {
-                    yield pr.addReviewers(reviewers);
-                    core.info(`Added reviewers to PR #${number}: ${reviewers.join(', ')}`);
+                // Re-requesting a review from someone that already approved makes them un-approve the PR, so we filter out the approvers
+                const approvers = yield pr.getApprovers();
+                const reviewersToAdd = reviewers.filter((reviewer) => !approvers.includes(reviewer));
+                if (reviewersToAdd.length > 0) {
+                    yield pr.addReviewers(reviewersToAdd);
+                    core.info(`Added reviewers to PR #${number}: ${reviewersToAdd.join(', ')}`);
                 }
             }
             catch (error) {
@@ -162,6 +165,32 @@ class PullRequest {
     constructor(client, context) {
         this.client = client;
         this.context = context;
+    }
+    getApprovers() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { owner, repo, number: pull_number } = this.context.issue;
+            try {
+                const result = yield this.client.rest.pulls.listReviews({
+                    owner,
+                    repo,
+                    pull_number,
+                });
+                core.debug(JSON.stringify(result));
+                if (result.status == 200 && result.data) {
+                    return result.data
+                        .filter((review) => review.state === 'APPROVED')
+                        .map((review) => { var _a; return (_a = review === null || review === void 0 ? void 0 : review.user) === null || _a === void 0 ? void 0 : _a.login; })
+                        .filter((login) => !!login); // filter undefined
+                }
+                else {
+                    return [];
+                }
+            }
+            catch (err) {
+                core.debug(String(err));
+                return [];
+            }
+        });
     }
     addReviewers(reviewers) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -317,11 +346,11 @@ exports.fetchConfigurationFile = exports.chooseUsersFromGroups = exports.include
 const lodash_1 = __importDefault(__nccwpck_require__(250));
 const yaml = __importStar(__nccwpck_require__(1917));
 function chooseReviewers(owner, config) {
-    const { useReviewGroups, reviewGroups, numberOfReviewers, reviewers } = config;
+    const { useReviewGroups, reviewGroups, numberOfReviewers, reviewers, chooseOnlyUserGroups = false, } = config;
     let chosenReviewers = [];
     const useGroups = useReviewGroups && Object.keys(reviewGroups).length > 0;
     if (useGroups) {
-        chosenReviewers = chooseUsersFromGroups(owner, reviewGroups, numberOfReviewers);
+        chosenReviewers = chooseUsersFromGroups(owner, reviewGroups, numberOfReviewers, chooseOnlyUserGroups);
     }
     else {
         chosenReviewers = chooseUsers(reviewers, numberOfReviewers, owner);
@@ -369,10 +398,11 @@ function includesSkipKeywords(title, skipKeywords) {
     return false;
 }
 exports.includesSkipKeywords = includesSkipKeywords;
-function chooseUsersFromGroups(owner, groups, desiredNumber) {
+function chooseUsersFromGroups(owner, groups, desiredNumber, chooseOnlyUserGroups = false) {
     let users = [];
     for (const group in groups) {
-        if (groups[group].includes(owner)) {
+        if (!chooseOnlyUserGroups ||
+            (chooseOnlyUserGroups && groups[group].includes(owner))) {
             users = users.concat(chooseUsers(groups[group], desiredNumber, owner));
         }
     }
