@@ -34,13 +34,46 @@ export class PullRequest {
     }
   }
 
+  async getCurrentReviewers(): Promise<string[]> {
+    const { owner, repo, number: pull_number } = this.context.issue
+    try {
+      const result = await this.client.rest.pulls.listRequestedReviewers({
+        owner,
+        repo,
+        pull_number,
+      })
+      core.debug(JSON.stringify(result))
+      if (result.status === 200 && result.data) {
+        return result.data.users?.map((user) => user.login) || []
+      } else {
+        return []
+      }
+    } catch (err) {
+      core.debug(String(err))
+      return []
+    }
+  }
+
   async addReviewers(reviewers: string[]): Promise<void> {
     const { owner, repo, number: pull_number } = this.context.issue
+
+    // Get current reviewers to avoid duplicates
+    const currentReviewers = await this.getCurrentReviewers()
+    const newReviewers = reviewers.filter(
+      (reviewer) => !currentReviewers.includes(reviewer)
+    )
+
+    // Only make API call if there are new reviewers to add
+    if (newReviewers.length === 0) {
+      core.debug('No new reviewers to add')
+      return
+    }
+
     const result = await this.client.rest.pulls.requestReviewers({
       owner,
       repo,
       pull_number,
-      reviewers,
+      reviewers: newReviewers,
     })
     core.debug(JSON.stringify(result))
   }
