@@ -19,7 +19,7 @@ jobs:
   add-reviews:
     runs-on: ubuntu-latest
     steps:
-      - uses: arushs/auto-assign-action@v1.0.0
+      - uses: persona-id/auto-assign-action@SHA #vX.Y.Z
         with:
           configuration-path: '.github/some_name_for_configs.yml' # Only needed if you use something other than .github/auto_assign.yml
 ```
