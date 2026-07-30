@@ -75,6 +75,6 @@ describe.only('run', () => {
 
     await run()
 
-    expect(mockedHandler.handlePullRequest).toBeCalled()
+    expect(mockedHandler.handlePullRequest).toHaveBeenCalled()
   })
 })

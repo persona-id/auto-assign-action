@@ -157,7 +157,7 @@ describe('handlePullRequest', () => {
 
     await handler.handlePullRequest(client, context, config)
 
-    expect(addAssigneesSpy).not.toBeCalled()
+    expect(addAssigneesSpy).not.toHaveBeenCalled()
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers).toHaveLength(3)
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers![0]).toMatch(
       /reviewer/
@@ -198,7 +198,7 @@ describe('handlePullRequest', () => {
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![0]).toMatch(
       'pr-creator'
     )
-    expect(requestReviewersSpy).not.toBeCalled()
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
   })
 
   test('responds with error if addAssignees is not set to boolean or author', async () => {
@@ -266,7 +266,7 @@ describe('handlePullRequest', () => {
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees).toEqual(
       expect.arrayContaining(['reviewer1', 'reviewer2', 'reviewer3'])
     )
-    expect(requestReviewersSpy).not.toBeCalled()
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
   })
 
   test('adds assignees to pull requests if the assigness are enabled explicitly', async () => {
@@ -306,7 +306,7 @@ describe('handlePullRequest', () => {
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees).toEqual(
       expect.arrayContaining(['assignee1'])
     )
-    expect(requestReviewersSpy).not.toBeCalled()
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
   })
 
   test('adds assignees to pull requests using the numberOfReviewers when numberOfAssignees is unspecified', async () => {
@@ -481,9 +481,7 @@ describe('handlePullRequest', () => {
     const client = github.getOctokit('token')
 
     // THEN
-    expect(
-      handler.handlePullRequest(client, context, config)
-    ).rejects.toThrowError(
+    expect(handler.handlePullRequest(client, context, config)).rejects.toThrow(
       new Error(
         "Error in configuration file to do with using review groups. Expected 'reviewGroups' variable to be set because the variable 'useReviewGroups' = true."
       )
@@ -499,9 +497,7 @@ describe('handlePullRequest', () => {
     const client = github.getOctokit('token')
 
     // THEN
-    expect(
-      handler.handlePullRequest(client, context, config)
-    ).rejects.toThrowError(
+    expect(handler.handlePullRequest(client, context, config)).rejects.toThrow(
       new Error(
         "Error in configuration file to do with using review groups. Expected 'assigneeGroups' variable to be set because the variable 'useAssigneeGroups' = true."
       )
@@ -548,7 +544,7 @@ describe('handlePullRequest', () => {
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers![0]).toMatch(
       /reviewer/
     )
-    expect(addAssigneesSpy).not.toBeCalled()
+    expect(addAssigneesSpy).not.toHaveBeenCalled()
   })
 
   test('adds reviewers to pull request from two different groups if review groups are enabled', async () => {
@@ -596,7 +592,7 @@ describe('handlePullRequest', () => {
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers![1]).toMatch(
       /group2/
     )
-    expect(addAssigneesSpy).not.toBeCalled()
+    expect(addAssigneesSpy).not.toHaveBeenCalled()
   })
 
   test('adds reviewers to pull request from two different groups if review groups are enabled and user is in group', async () => {
@@ -642,7 +638,7 @@ describe('handlePullRequest', () => {
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers![0]).toMatch(
       /group1/
     )
-    expect(addAssigneesSpy).not.toBeCalled()
+    expect(addAssigneesSpy).not.toHaveBeenCalled()
   })
 
   test('adds all reviewers from a group that has less members than the number of reviews requested', async () => {
@@ -693,7 +689,7 @@ describe('handlePullRequest', () => {
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers![2]).toMatch(
       /group2-user1/
     )
-    expect(addAssigneesSpy).not.toBeCalled()
+    expect(addAssigneesSpy).not.toHaveBeenCalled()
   })
 
   test('adds assignees to pull request from two different groups if groups are enabled and number of assignees is specified', async () => {
@@ -741,7 +737,7 @@ describe('handlePullRequest', () => {
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![0]).toMatch(/group1/)
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![1]).toMatch(/group2/)
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![2]).toMatch(/group3/)
-    expect(requestReviewersSpy).not.toBeCalled()
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
   })
 
   test('adds assignees to pull request from two different groups using numberOfReviewers if groups are enabled and number of assignees is not specified', async () => {
@@ -788,7 +784,7 @@ describe('handlePullRequest', () => {
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![0]).toMatch(/group1/)
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![1]).toMatch(/group2/)
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![2]).toMatch(/group3/)
-    expect(requestReviewersSpy).not.toBeCalled()
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
   })
 
   test('adds assignees to pull request from two different groups and reviewers are not specified', async () => {
@@ -835,7 +831,7 @@ describe('handlePullRequest', () => {
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![0]).toMatch(/group1/)
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![1]).toMatch(/group2/)
     expect(addAssigneesSpy.mock.calls[0][0]?.assignees![2]).toMatch(/group3/)
-    expect(requestReviewersSpy).not.toBeCalled()
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
   })
 
   test('adds normal reviewers and assignees from groups into the pull request', async () => {
@@ -1019,7 +1015,7 @@ describe('handlePullRequest', () => {
 
     await handler.handlePullRequest(client, context, config)
 
-    expect(addAssigneesSpy).not.toBeCalled()
+    expect(addAssigneesSpy).not.toHaveBeenCalled()
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers).toHaveLength(3)
     expect(requestReviewersSpy.mock.calls[0][0]?.reviewers![0]).toMatch(
       /reviewer/
