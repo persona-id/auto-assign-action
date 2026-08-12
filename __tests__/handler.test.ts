@@ -1021,4 +1021,137 @@ describe('handlePullRequest', () => {
       /reviewer/
     )
   })
+
+  test('only adds the platform-backend group as reviewers when the pull request has the rubocop-rule-cleanup label', async () => {
+    // MOCKS
+    ;(github.getOctokit as jest.Mock).mockImplementation(() => ({
+      rest: {
+        pulls: {
+          requestReviewers: async () => {},
+        },
+        issues: {
+          addAssignees: async () => {},
+        },
+      },
+    }))
+
+    const client = github.getOctokit('token')
+
+    const requestReviewersSpy = jest.spyOn(
+      client.rest.pulls,
+      'requestReviewers'
+    )
+
+    // GIVEN
+    const config = {
+      addAssignees: false,
+      addReviewers: true,
+      useReviewGroups: true,
+      numberOfReviewers: 0,
+      reviewGroups: {
+        groupA: ['group1-user1', 'group1-user2'],
+        'platform-backend': ['platform-user1', 'platform-user2'],
+      },
+    } as any
+
+    context.payload.pull_request!.labels = [{ name: 'rubocop-rule-cleanup' }]
+
+    // WHEN
+    await handler.handlePullRequest(client, context, config)
+
+    // THEN
+    expect(requestReviewersSpy.mock.calls[0][0]?.reviewers).toEqual([
+      'platform-user1',
+      'platform-user2',
+    ])
+  })
+
+  test('only adds the platform-backend group as reviewers when the rubocop-rule-cleanup label is present and review groups are disabled', async () => {
+    // MOCKS
+    ;(github.getOctokit as jest.Mock).mockImplementation(() => ({
+      rest: {
+        pulls: {
+          requestReviewers: async () => {},
+        },
+        issues: {
+          addAssignees: async () => {},
+        },
+      },
+    }))
+
+    const client = github.getOctokit('token')
+
+    const requestReviewersSpy = jest.spyOn(
+      client.rest.pulls,
+      'requestReviewers'
+    )
+
+    // GIVEN
+    const config = {
+      addAssignees: false,
+      addReviewers: true,
+      useReviewGroups: false,
+      numberOfReviewers: 0,
+      reviewers: ['reviewer1', 'reviewer2'],
+      reviewGroups: {
+        'platform-backend': ['platform-user1', 'platform-user2'],
+      },
+    } as any
+
+    context.payload.pull_request!.labels = [{ name: 'rubocop-rule-cleanup' }]
+
+    // WHEN
+    await handler.handlePullRequest(client, context, config)
+
+    // THEN
+    expect(requestReviewersSpy.mock.calls[0][0]?.reviewers).toEqual([
+      'platform-user1',
+      'platform-user2',
+    ])
+  })
+
+  test('does not add reviewers when the rubocop-rule-cleanup label is present but the platform-backend group is not configured', async () => {
+    const warningSpy = jest.spyOn(core, 'warning')
+
+    // MOCKS
+    ;(github.getOctokit as jest.Mock).mockImplementation(() => ({
+      rest: {
+        pulls: {
+          requestReviewers: async () => {},
+        },
+        issues: {
+          addAssignees: async () => {},
+        },
+      },
+    }))
+
+    const client = github.getOctokit('token')
+
+    const requestReviewersSpy = jest.spyOn(
+      client.rest.pulls,
+      'requestReviewers'
+    )
+
+    // GIVEN
+    const config = {
+      addAssignees: false,
+      addReviewers: true,
+      useReviewGroups: true,
+      numberOfReviewers: 0,
+      reviewGroups: {
+        groupA: ['group1-user1', 'group1-user2'],
+      },
+    } as any
+
+    context.payload.pull_request!.labels = [{ name: 'rubocop-rule-cleanup' }]
+
+    // WHEN
+    await handler.handlePullRequest(client, context, config)
+
+    // THEN
+    expect(requestReviewersSpy).not.toHaveBeenCalled()
+    expect(warningSpy).toHaveBeenCalledWith(
+      "PR is labeled with 'rubocop-rule-cleanup' but the 'platform-backend' review group is not defined in the configuration file."
+    )
+  })
 })

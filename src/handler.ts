@@ -5,6 +5,10 @@ import { PullRequest } from './pull_request'
 import { Client } from './types'
 import { PullRequestEvent } from '@octokit/webhooks-types'
 
+// PRs that only clean up rubocop rule violations are reviewed exclusively by the platform-backend group
+const RUBOCOP_CLEANUP_LABEL = 'rubocop-rule-cleanup'
+const RUBOCOP_CLEANUP_REVIEW_GROUP = 'platform-backend'
+
 export interface Config {
   addReviewers: boolean
   addAssignees: boolean | string
@@ -100,7 +104,31 @@ export async function handlePullRequest(
 
   if (addReviewers) {
     try {
-      const reviewers = utils.chooseReviewers(owner, config)
+      // Rubocop rule cleanups are reviewed by the platform-backend group only, so the label
+      // replaces the reviewer list instead of adding to it.
+      let reviewerConfig = config
+
+      if (pr.hasAnyLabel([RUBOCOP_CLEANUP_LABEL])) {
+        const group = reviewGroups?.[RUBOCOP_CLEANUP_REVIEW_GROUP]
+        if (!group) {
+          throw new Error(
+            `PR is labeled with '${RUBOCOP_CLEANUP_LABEL}' but the '${RUBOCOP_CLEANUP_REVIEW_GROUP}' review group is not defined in the configuration file.`
+          )
+        }
+
+        reviewerConfig = {
+          ...config,
+          useReviewGroups: true,
+          reviewGroups: { [RUBOCOP_CLEANUP_REVIEW_GROUP]: group },
+          // the author is not necessarily part of the group, so don't restrict to the author's own groups
+          chooseOnlyUserGroups: false,
+        }
+        core.info(
+          `PR is labeled with '${RUBOCOP_CLEANUP_LABEL}', so reviewers are only chosen from the '${RUBOCOP_CLEANUP_REVIEW_GROUP}' group`
+        )
+      }
+
+      const reviewers = utils.chooseReviewers(owner, reviewerConfig)
 
       // Re-requesting a review from someone that already approved makes them un-approve the PR, so we filter out the approvers
       const approvers = await pr.getApprovers()
