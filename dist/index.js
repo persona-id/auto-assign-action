@@ -53,6 +53,9 @@ exports.handlePullRequest = handlePullRequest;
 const core = __importStar(__nccwpck_require__(7484));
 const utils = __importStar(__nccwpck_require__(9277));
 const pull_request_1 = __nccwpck_require__(6055);
+// PRs that only clean up rubocop rule violations are reviewed exclusively by the platform-backend group
+const RUBOCOP_CLEANUP_LABEL = 'rubocop-rule-cleanup';
+const RUBOCOP_CLEANUP_REVIEW_GROUP = 'platform-backend';
 function handlePullRequest(client, context, config) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!context.payload.pull_request) {
@@ -95,7 +98,20 @@ function handlePullRequest(client, context, config) {
         }
         if (addReviewers) {
             try {
-                const reviewers = utils.chooseReviewers(owner, config);
+                // Rubocop rule cleanups are reviewed by the platform-backend group only, so the label
+                // replaces the reviewer list instead of adding to it.
+                let reviewerConfig = config;
+                if (pr.hasAnyLabel([RUBOCOP_CLEANUP_LABEL])) {
+                    const group = reviewGroups === null || reviewGroups === void 0 ? void 0 : reviewGroups[RUBOCOP_CLEANUP_REVIEW_GROUP];
+                    if (!group) {
+                        throw new Error(`PR is labeled with '${RUBOCOP_CLEANUP_LABEL}' but the '${RUBOCOP_CLEANUP_REVIEW_GROUP}' review group is not defined in the configuration file.`);
+                    }
+                    reviewerConfig = Object.assign(Object.assign({}, config), { useReviewGroups: true, reviewGroups: { [RUBOCOP_CLEANUP_REVIEW_GROUP]: group }, 
+                        // the author is not necessarily part of the group, so don't restrict to the author's own groups
+                        chooseOnlyUserGroups: false });
+                    core.info(`PR is labeled with '${RUBOCOP_CLEANUP_LABEL}', so reviewers are only chosen from the '${RUBOCOP_CLEANUP_REVIEW_GROUP}' group`);
+                }
+                const reviewers = utils.chooseReviewers(owner, reviewerConfig);
                 // Re-requesting a review from someone that already approved makes them un-approve the PR, so we filter out the approvers
                 const approvers = yield pr.getApprovers();
                 const reviewersToAdd = reviewers.filter((reviewer) => !approvers.includes(reviewer));
